@@ -381,8 +381,8 @@ const stagehand = new Stagehand({
   apiKey: process.env.BROWSERBASE_API_KEY!,
   projectId: process.env.BROWSERBASE_PROJECT_ID!,
   browserbaseSessionID: session.id,
-  modelName: "gpt-4o",
-  modelClientOptions: { apiKey: process.env.OPENAI_API_KEY! },
+  modelName: "google/gemini-2.5-flash",
+  modelClientOptions: { apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY! },
 });
 
 await stagehand.init();

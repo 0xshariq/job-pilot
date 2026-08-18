@@ -299,7 +299,7 @@ const stagehand = new Stagehand({
   apiKey: process.env.BROWSERBASE_API_KEY!,
   projectId: process.env.BROWSERBASE_PROJECT_ID!,
   browserbaseSessionID: session.id,
-  model: { modelName: "openai/gpt-4o", apiKey: process.env.OPENAI_API_KEY! },
+  model: { modelName: "google/gemini-2.5-flash", apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY! },
   disablePino: true,
 });
 
@@ -453,14 +453,12 @@ Experience: ${profile.years_experience} years, level ${profile.experience_level}
 Skills: ${profile.skills.join(", ")}
 Work history: ${JSON.stringify(profile.work_experience)}`;
 
-const response = await openai.chat.completions.create({
-  model: "gpt-4o",
-  response_format: { type: "json_object" },
+const dossier = await generateStructured({
+  schema: dossierSchema,
+  system: systemPrompt,
+  prompt: userPrompt,
   temperature: 0.4,
-  messages: [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userPrompt },
-  ],
+  maxOutputTokens: 1200,
 });
 ```
 
@@ -483,7 +481,7 @@ const response = await openai.chat.completions.create({
 - Always use `extract()` with a Zod schema — never parse raw HTML or use regex
 - Always wrap every `act()` and `extract()` in try/catch
 - Always call `await stagehand.close()` when done — ends the Browserbase session
-- Model is always `gpt-4o` — never use other models
+- Use the configured Gemini model for browser control; keep the model identifier and API key server-side
 - Temperature is `0.4` for synthesis — grounded but flexible enough to make real connections
 - Max 3 sub-pages — never exceed this on free plan
 - Always close session in finally block — never leave sessions open even if research fails
@@ -494,27 +492,15 @@ const response = await openai.chat.completions.create({
 ### Structured JSON Response
 
 ```typescript
-import OpenAI from "openai";
+import { generateStructured } from "@/lib/gemini";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-
-const response = await openai.chat.completions.create({
-  model: "gpt-4o",
-  response_format: { type: "json_object" },
+const result = await generateStructured({
+  schema,
+  system: "You are a job matching assistant. Return structured data.",
+  prompt: "Your prompt here",
   temperature: 0.3,
-  messages: [
-    {
-      role: "system",
-      content: "You are a job matching assistant. Return only valid JSON.",
-    },
-    {
-      role: "user",
-      content: `Your prompt here`,
-    },
-  ],
+  maxOutputTokens: 800,
 });
-
-const result = JSON.parse(response.choices[0].message.content!);
 ```
 
 **Temperature settings:**
@@ -531,9 +517,9 @@ const result = JSON.parse(response.choices[0].message.content!);
 
 **Rules:**
 
-- Model string is always `'gpt-4o'` — never use other model names
-- Always use `response_format: { type: 'json_object' }` for structured data
-- Always parse `response.choices[0].message.content` as string — even with json_object it returns a string
+- Use the shared Gemini helper instead of provider-specific client calls
+- Always pass a Zod schema to validate structured data
+- Always handle generation failures with a safe user-facing fallback
 - Always validate parsed JSON before using — wrap in try/catch
 - Match threshold is always `MATCH_THRESHOLD` from `lib/utils.ts` — never hardcode 70
 - Company research synthesis must always return a complete dossier — never return empty even if browser research failed
