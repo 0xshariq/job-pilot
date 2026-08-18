@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import OpenAI from "openai";
+import { z } from "zod";
 // Import from lib directly to avoid pdf-parse's index.js debug mode, which reads
 // a test file on every require() call and crashes when module.parent is null
 // (always the case under Next.js/Turbopack).
@@ -14,6 +14,7 @@ import { requireUser } from "@/lib/auth";
 import { createInsforgeServer } from "@/lib/insforge-server";
 import { trackPostHogEvent } from "@/lib/posthog-server";
 import { calculateCompletion } from "@/lib/profile-utils";
+import { generateStructured } from "@/lib/gemini";
 import type { Education, WorkExperience } from "@/types";
 
 type WorkExperienceEntry = {
@@ -214,7 +215,15 @@ export type ExtractedProfile = {
   phone: string | null;
   location: string | null;
   current_title: string | null;
-  experience_level: string | null;
+  experience_level:
+    | "Junior"
+    | "Mid-Level"
+    | "Senior"
+    | "Lead"
+    | "Manager"
+    | "Director"
+    | "Executive"
+    | null;
   years_experience: number | null;
   skills: string[];
   industries: string[];
@@ -224,6 +233,46 @@ export type ExtractedProfile = {
   linkedin_url: string | null;
   portfolio_url: string | null;
 };
+
+const experienceLevelSchema = z.enum([
+  "Junior",
+  "Mid-Level",
+  "Senior",
+  "Lead",
+  "Manager",
+  "Director",
+  "Executive",
+]);
+
+const extractedProfileSchema: z.ZodType<ExtractedProfile> = z.object({
+  full_name: z.string().nullable(),
+  phone: z.string().nullable(),
+  location: z.string().nullable(),
+  current_title: z.string().nullable(),
+  experience_level: experienceLevelSchema.nullable(),
+  years_experience: z.number().nullable(),
+  skills: z.array(z.string()).default([]),
+  industries: z.array(z.string()).default([]),
+  work_experience: z.array(
+    z.object({
+      company: z.string(),
+      title: z.string(),
+      start_date: z.string(),
+      end_date: z.string().nullable(),
+      is_current: z.boolean(),
+      responsibilities: z.string(),
+    }),
+  ).default([]),
+  education: z.object({
+    degree: z.string().nullable(),
+    field: z.string().nullable(),
+    institution: z.string().nullable(),
+    graduation_year: z.string().nullable(),
+  }),
+  job_titles_seeking: z.array(z.string()).default([]),
+  linkedin_url: z.string().nullable(),
+  portfolio_url: z.string().nullable(),
+});
 
 export async function extractProfile(): Promise<{
   success: boolean;
@@ -259,50 +308,14 @@ export async function extractProfile(): Promise<{
       };
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      response_format: { type: "json_object" },
+    const extracted = await generateStructured({
+      schema: extractedProfileSchema,
+      system:
+        "You are a resume parser. Extract structured profile data from the resume text. Use null for missing fields and always return arrays, never null arrays. experience_level must be one of: Junior, Mid-Level, Senior, Lead, Manager, Director, Executive, or null.",
+      prompt: `Extract profile data from this resume.\n\nResume text:\n${extractedText.slice(0, 6000)}`,
       temperature: 0.3,
-      max_tokens: 800,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a resume parser. Extract structured profile data from the resume text and return only valid JSON matching the exact schema provided. Use null for missing fields. Arrays must always be arrays (never null). experience_level must be one of: Junior, Mid-Level, Senior, Lead, Manager, Director, Executive — pick the closest match or null.",
-        },
-        {
-          role: "user",
-          content: `Extract profile data from this resume and return JSON with this exact shape:
-{
-  "full_name": string | null,
-  "phone": string | null,
-  "location": string | null,
-  "current_title": string | null,
-  "experience_level": "Junior"|"Mid-Level"|"Senior"|"Lead"|"Manager"|"Director"|"Executive"|null,
-  "years_experience": number | null,
-  "skills": string[],
-  "industries": string[],
-  "work_experience": [{ "company": string, "title": string, "start_date": string, "end_date": string|null, "is_current": boolean, "responsibilities": string }],
-  "education": { "degree": string|null, "field": string|null, "institution": string|null, "graduation_year": string|null },
-  "job_titles_seeking": string[],
-  "linkedin_url": string|null,
-  "portfolio_url": string|null
-}
-
-Resume text:
-${extractedText.slice(0, 6000)}`,
-        },
-      ],
+      maxOutputTokens: 800,
     });
-
-    const raw = response.choices[0].message.content;
-    if (!raw) {
-      return { success: false, error: "AI returned an empty response." };
-    }
-
-    const extracted = JSON.parse(raw) as ExtractedProfile;
 
     return { success: true, data: extracted };
   } catch (error) {

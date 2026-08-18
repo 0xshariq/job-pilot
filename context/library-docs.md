@@ -249,7 +249,7 @@ const jobRecord = {
 - `source` is always `'search'` for Adzuna jobs — never any other value
 - `salary_is_predicted: "1"` means Adzuna estimated the salary — this is normal
 - Always display "Jobs by Adzuna" credit on job listings — 116x23px minimum linked to adzuna.com
-- Adzuna description is a snippet — GPT-4o scores from it, not a full description
+- Adzuna description is a snippet — Gemini scores from it, not a full description
 - Default country to `'us'` — support `gb`, `au`, `ca` as alternatives
 
 ---
@@ -299,7 +299,7 @@ const stagehand = new Stagehand({
   apiKey: process.env.BROWSERBASE_API_KEY!,
   projectId: process.env.BROWSERBASE_PROJECT_ID!,
   browserbaseSessionID: session.id,
-  model: { modelName: "openai/gpt-4o", apiKey: process.env.OPENAI_API_KEY! },
+  model: { modelName: "google/gemini-2.5-flash", apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY! },
   disablePino: true,
 });
 
@@ -352,7 +352,7 @@ Replace the existing Stagehand "Company Research Pattern" section in library-doc
 
 ### Company Research Pattern
 
-Three-step process: homepage extraction → sub-page extraction → GPT-4o synthesis.
+Three-step process: homepage extraction → sub-page extraction → Gemini synthesis.
 Job description and user profile come from DB — never re-fetch what you already have.
 Browser's only job is the company website.
 
@@ -413,7 +413,7 @@ const subPageData = await stagehand.extract({
   }),
 });
 
-// Step 3 — GPT-4o synthesis (after browser closes)
+// Step 3 — Gemini synthesis (after browser closes)
 // Feed three data sources: company research + job from DB + profile from DB
 const systemPrompt = `You are a sharp career strategist preparing a candidate to apply for a specific role. You are given (a) research collected from the company's own website, (b) the job posting, and (c) the candidate's profile. Produce a concise, concrete briefing that gives this specific candidate an edge for this specific role.
 
@@ -453,14 +453,12 @@ Experience: ${profile.years_experience} years, level ${profile.experience_level}
 Skills: ${profile.skills.join(", ")}
 Work history: ${JSON.stringify(profile.work_experience)}`;
 
-const response = await openai.chat.completions.create({
-  model: "gpt-4o",
-  response_format: { type: "json_object" },
+const dossier = await generateStructured({
+  schema: dossierSchema,
+  system: systemPrompt,
+  prompt: userPrompt,
   temperature: 0.4,
-  messages: [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userPrompt },
-  ],
+  maxOutputTokens: 1200,
 });
 ```
 
@@ -483,7 +481,7 @@ const response = await openai.chat.completions.create({
 - Always use `extract()` with a Zod schema — never parse raw HTML or use regex
 - Always wrap every `act()` and `extract()` in try/catch
 - Always call `await stagehand.close()` when done — ends the Browserbase session
-- Model is always `gpt-4o` — never use other models
+- Use the configured Gemini model for browser control; keep the model identifier and API key server-side
 - Temperature is `0.4` for synthesis — grounded but flexible enough to make real connections
 - Max 3 sub-pages — never exceed this on free plan
 - Always close session in finally block — never leave sessions open even if research fails
@@ -494,27 +492,15 @@ const response = await openai.chat.completions.create({
 ### Structured JSON Response
 
 ```typescript
-import OpenAI from "openai";
+import { generateStructured } from "@/lib/gemini";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-
-const response = await openai.chat.completions.create({
-  model: "gpt-4o",
-  response_format: { type: "json_object" },
+const result = await generateStructured({
+  schema,
+  system: "You are a job matching assistant. Return structured data.",
+  prompt: "Your prompt here",
   temperature: 0.3,
-  messages: [
-    {
-      role: "system",
-      content: "You are a job matching assistant. Return only valid JSON.",
-    },
-    {
-      role: "user",
-      content: `Your prompt here`,
-    },
-  ],
+  maxOutputTokens: 800,
 });
-
-const result = JSON.parse(response.choices[0].message.content!);
 ```
 
 **Temperature settings:**
@@ -524,16 +510,16 @@ const result = JSON.parse(response.choices[0].message.content!);
 
 **Max tokens:**
 
-- Job matching + scoring: `300`
-- Company research synthesis: `800`
+- Job matching + scoring: `1200`
+- Company research synthesis: `1200`
 - Resume generation: `1000`
 - Profile extraction from resume: `800`
 
 **Rules:**
 
-- Model string is always `'gpt-4o'` — never use other model names
-- Always use `response_format: { type: 'json_object' }` for structured data
-- Always parse `response.choices[0].message.content` as string — even with json_object it returns a string
+- Use the shared Gemini helper instead of provider-specific client calls
+- Always pass a Zod schema to validate structured data
+- Always handle generation failures with a safe user-facing fallback
 - Always validate parsed JSON before using — wrap in try/catch
 - Match threshold is always `MATCH_THRESHOLD` from `lib/utils.ts` — never hardcode 70
 - Company research synthesis must always return a complete dossier — never return empty even if browser research failed
@@ -552,7 +538,7 @@ import posthog from "posthog-js";
 
 export function initPostHog() {
   if (typeof window !== "undefined") {
-    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN!, {
       api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST!,
       capture_pageview: false, // manual pageview tracking
     });
@@ -574,7 +560,7 @@ posthog.capture("job_found", {
 import { PostHog } from "posthog-node";
 
 export const createPostHogServer = () =>
-  new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+  new PostHog(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN!, {
     host: process.env.NEXT_PUBLIC_POSTHOG_HOST!,
     flushAt: 1, // send immediately
     flushInterval: 0, // no batching — Next.js functions are short-lived
@@ -674,13 +660,13 @@ export async function POST(req: NextRequest) {
   const pdfData = await pdf(buffer);
   const extractedText = pdfData.text; // raw text content
 
-  // Send to GPT-4o for structured extraction
+  // Send to Gemini for structured extraction
 }
 ```
 
 **Rules:**
 
 - Server-side only — never import in client components
-- `pdfData.text` is raw unformatted text — GPT-4o handles the structure extraction
+- `pdfData.text` is raw unformatted text — Gemini handles the structure extraction
 - Always handle parse errors — some PDFs are image-based and return empty text
 - If `pdfData.text` is empty or very short — return error to user: "Could not extract text from this PDF. Please try a different file."

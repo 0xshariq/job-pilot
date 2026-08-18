@@ -1,179 +1,231 @@
-<div align="center">
-  <br />
-    <a href="https://youtu.be/9dKA2hq4vf0" target="_blank">
-      <img src="public/readme/readme-hero.webp" alt="Project Banner">
-    </a>
-  <br />
+# JobPilot
 
-  <div>
-<img src="https://img.shields.io/badge/-Next.js-black?style=for-the-badge&logo=Next.js&logoColor=white" />
-<img src="https://img.shields.io/badge/-TypeScript-3178C6?style=for-the-badge&logo=TypeScript&logoColor=white" />
-<img src="https://img.shields.io/badge/-Tailwind%20CSS-06B6D4?style=for-the-badge&logo=Tailwind%20CSS&logoColor=white" />
-<img src="https://img.shields.io/badge/-shadcn%2Fui-000000?style=for-the-badge&logo=shadcnui&logoColor=white" />
-<br />
-<img src="https://img.shields.io/badge/-OpenAI%20GPT--4o-412991?style=for-the-badge&logo=OpenAI&logoColor=white" />
-<img src="https://img.shields.io/badge/-Stagehand-orange?style=for-the-badge" />
-<img src="https://img.shields.io/badge/-Browserbase-000000?style=for-the-badge" />
-<img src="https://img.shields.io/badge/-InsForge-darkgreen?style=for-the-badge" />
+JobPilot is a full-stack AI-powered job hunting assistant for technical professionals. It helps job seekers discover relevant roles, understand how well each role matches their experience, research companies, generate polished resumes, and keep their job search organized in one place.
 
-  </div>
+The goal is simple: reduce the repetitive research and preparation work that happens before applying, while keeping the final decision and application under the user's control.
 
-  <h3 align="center">JobPilot | Match-tracking AI Agent</h3>
+## What JobPilot Does
 
-   <div align="center">
-     Build this project step by step with our detailed tutorial on <a href="https://www.youtube.com/watch?v=XUkNR-JfHwo" target="_blank"><b>JavaScript Mastery</b></a> YouTube. Join the JSM family!
-    </div>
-</div>
- 
-## 📋 <a name="table">Table of Contents</a>
+JobPilot turns a user's profile and resume into a personalized job-search workflow:
 
-1. ✨ [Introduction](#introduction)
-2. ⚙️ [Tech Stack](#tech-stack)
-3. 🔋 [Features](#features)
-4. 🤸 [Quick Start](#quick-start)
-5. 🔗 [Assets](#links)
-6. 🚀 [More](#more)
+1. The user creates a profile with their experience, skills, preferred industries, experience level, and target roles.
+2. The user can upload a resume PDF and optionally extract profile information from it.
+3. The user searches for jobs by title and location through the Adzuna API.
+4. Gemini evaluates each job against the user's profile and returns a match score, explanation, matched skills, and missing skills.
+5. The user opens a job's detail page to review the description, requirements, salary, source, and application link.
+6. The user can research the company using Browserbase and Stagehand, which browse public company pages and produce a structured research dossier.
+7. The user can generate a polished resume from their profile and download it as a PDF.
+8. Dashboard statistics, recent activity, and analytics help the user monitor their search.
 
-## 🚨 Tutorial
+JobPilot does not automatically submit applications. It helps the user make better decisions and prepare faster, while the user remains in control of every application.
 
-This repository contains the code corresponding to an in-depth tutorial available on our YouTube channel, <a href="https://www.youtube.com/@javascriptmastery/videos" target="_blank"><b>JavaScript Mastery</b></a>.
+## Core Features
 
-If you prefer visual learning, this is the perfect resource for you. Follow our tutorial to learn how to build projects like these step-by-step in a beginner-friendly manner!
+### Personalized profile and resume management
 
-<a href="https://youtu.be/9dKA2hq4vf0" target="_blank"><img src="https://github.com/sujatagunale/EasyRead/assets/151519281/1736fca5-a031-4854-8c09-bc110e3bc16d" /></a>
+- Profile fields for contact information, location, current title, experience level, skills, industries, education, work history, and target roles.
+- Resume PDF upload and download.
+- Optional AI-powered resume extraction for automatically filling profile fields.
+- AI-generated professional summaries and achievement-focused work experience bullets.
+- PDF resume generation from the current profile.
 
-## <a name="introduction">✨ Introduction</a>
+### Job discovery
 
-JobPilot is an autonomous, full-stack AI agent that transforms how technical job seekers find work by simultaneously browsing LinkedIn, Wellfound, and YC Jobs to discover, score, and apply to roles. Powered by Next.js, GPT-4o, and Browserbase/Stagehand automation, the app dynamically customizes resumes and executes real browser application forms autonomously. More than just a utility, JobPilot serves as a masterclass in modern agentic engineering, utilizing five core open-source skills—/architect, /remember, /review, /recover, and /imprint—to demonstrate how a single developer with a structured system can rapidly ship durable, production-grade AI software.
+- Search jobs by title and location.
+- Retrieve listings from Adzuna.
+- Store discovered jobs in the user's job inventory.
+- Preserve useful job information such as company, location, salary, description, source, and application URL.
+- Show Adzuna attribution on job listings.
 
-An experimental Browserbase/Stagehand apply path is included for review — see [BROWSERBASE_REPORT.md](BROWSERBASE_REPORT.md) for full details on what was attempted and where it currently stands.
+### Gemini-powered job matching
 
-If you're getting started and need assistance or face any bugs, join our active Discord community with over **50k+** members. It's a place where people help each other out.
+Gemini compares each job with the user's profile and returns:
 
-<a href="https://discord.com/invite/n6EdbFJ" target="_blank"><img src="https://github.com/sujatagunale/EasyRead/assets/151519281/618f4872-1e10-42da-8213-1d69e486d02e" /></a>
+- A match score from 0 to 100.
+- A concise explanation of the match.
+- Skills found in both the profile and job description.
+- Skills or qualifications that may be missing.
 
-## <a name="tech-stack">⚙️ Tech Stack</a>
+The score is a decision-support signal, not a guarantee that a job is suitable. Users can still review every discovered job, including lower-scoring roles.
 
-- **[Next.js](https://nextjs.org/)** is a full-stack React framework that powers JobPilot's user interface, utilizing the App Router, Server Actions, and API Routes to deliver server-rendered components and high-performance client-side navigation.
-- **[TypeScript](https://www.typescriptlang.org/)** is a strongly typed programming language that builds on JavaScript, ensuring strict type safety across the entire codebase and providing a maintainable environment for complex agent orchestration.
-- **[Tailwind v4](https://tailwindcss.com/)** is a utility-first CSS framework used for rapid UI development, providing a clean, responsive, and easily customized styling infrastructure.
-- **[shadcn/ui](https://ui.shadcn.com/)** is a collection of re-usable UI components built using Radix Primitives and Tailwind CSS, serving as the design system for the app's dashboard, tables, and job inventory views.
-- **[OpenAI GPT-4o](https://openai.com/)** is a highly capable multimodal AI model that serves as the core intelligence engine, parsing job descriptions to compute match scores, tailoring resumes, and driving the form-filling automation logic.
-- **[Stagehand](https://github.com/browserbase/stagehand)** is an AI-driven browser agent built on top of Playwright that uses LLMs to interpret page elements dynamically, allowing JobPilot to execute LinkedIn Easy Apply paths and handle external ATS form-filling.
-- **[Browserbase](https://www.browserbase.com/)** is a headless cloud browser platform that manages infrastructure, session persistence, authentication states, and CAPTCHA solving so background jobs can run through realistic browser instances.
-- **[InsForge](https://insforge.com/)** is a comprehensive backend-as-a-service provider that supplies the relational PostgreSQL database to manage the job inventory, handles user authentication, and provides secure file storage for assets.
-- **[PostHog](https://posthog.com/)** is an all-in-one product analytics platform used to track user engagement, system performance metrics, and the success rates of automated application paths.
+### Company research
 
+The company research flow uses Browserbase and Stagehand to inspect publicly available company pages. It can look for information across the company homepage, about pages, engineering pages, blogs, and other relevant links.
 
-## <a name="features">🔋 Features</a>
+The resulting dossier can include:
 
-👉 **LinkedIn Job Discovery**: Authenticated LinkedIn search utilizing a saved Browserbase context session to fetch job titles, companies, locations, and source/apply URLs automatically.
+- Company overview.
+- Products or business focus.
+- Technology and engineering signals.
+- Culture and working style indicators.
+- Why the role may exist.
+- Interview preparation points.
+- Source URLs used during research.
 
-👉 **Match Scoring**: Advanced evaluation where each discovered job is parsed and scored against your professional profile by an LLM, then ranked by match percentage.
+If a company has limited public information, JobPilot falls back to the job description and available company context instead of failing silently.
 
-👉 **Job Inventory**: A central, filterable dashboard table that organizes matched jobs with quick access to source links, external apply links, application types, and real-time status.
+### Dashboard and analytics
 
-👉 **Job Details**: A dedicated, per-job review view featuring a transparent match breakdown, full descriptions, direct resume controls, and manual apply triggers.
+The dashboard provides a high-level view of the search, including:
 
-👉 **Resume Generation & Tailoring**: Dynamic engine that generates a foundational resume from your user profile, then instantly customizes it to target specific job descriptions.
+- Total jobs found.
+- Average match rate.
+- Companies researched.
+- Jobs found this week.
+- Recent activity.
+- Job discovery and match analytics powered by PostHog.
 
-👉 **LinkedIn Easy Apply**: An experimental, automated application path utilizing saved LinkedIn session contexts and Stagehand DOM mode to submit applications directly.
+## Application Pages
 
-👉 **External Apply Attempt**: An experimental, hybrid-mode browser path powered by Stagehand designed to navigate complex external ATS forms and complete inputs autonomously.
+| Route | Purpose |
+| --- | --- |
+| `/` | Product homepage and introduction |
+| `/login` | Authentication entry point |
+| `/dashboard` | Search overview, activity, statistics, and analytics |
+| `/find-jobs` | Job search controls, filters, sorting, and pagination |
+| `/find-jobs/[id]` | Full job details, match breakdown, company research, and apply link |
+| `/profile` | Profile editing and resume management |
 
-👉 **Session Recordings**: Complete transparency layer that links every automated application attempt to a Browserbase video recording URL for auditing and debugging.
+## How the System Works
 
-And many more, including code architecture and reusability.
+### 1. Profile data
 
-## <a name="quick-start">🤸 Quick Start</a>
+Profile data is stored per user in InsForge. It is the source of truth for matching and resume generation. AI workflows can extract or generate content when explicitly requested, but ordinary job discovery and company research do not overwrite the user's profile.
 
-Follow these steps to set up the project locally on your machine.
+### 2. Job search
 
-**Prerequisites**
+The Find Jobs page sends the user's search terms to the server. The server calls Adzuna, normalizes the returned listings, and stores the relevant job data in InsForge.
 
-Make sure you have the following installed on your machine:
+### 3. Match scoring
 
-- [Git](https://git-scm.com/)
-- [Node.js](https://nodejs.org/en)
-- [npm](https://www.npmjs.com/) (Node Package Manager)
+The server sends the candidate profile and a bounded set of job details to Gemini. Structured output validation ensures the response contains the expected fields. If an AI response is unavailable or invalid, the application returns a safe fallback instead of exposing a broken request to the user.
 
-**Cloning the Repository**
+### 4. Company research
 
-```bash
-git clone https://github.com/adrianhajdin/job_pilot.git
-cd job_pilot
-```
+When the user requests research, the server creates a Browserbase session and uses Stagehand to navigate public pages. Extracted content is then synthesized by Gemini into a structured dossier that is stored with the job record.
 
-**Installation**
+### 5. Resume generation
 
-Install the project dependencies using npm:
+The user's profile is passed to Gemini with instructions to create a professional summary and rewrite work history into concise achievement-oriented bullets. The structured result is rendered into a downloadable PDF.
 
-```bash
-npm install
-```
+## Technology Stack
 
-**Set Up Environment Variables**
+- **Next.js 16** with the App Router, server actions, and route handlers.
+- **React 19** and **TypeScript**.
+- **Tailwind CSS** and **shadcn/ui** for the interface.
+- **Gemini** through the Vercel AI SDK and Google provider for structured generation and job matching.
+- **InsForge** for authentication, PostgreSQL-backed data, and storage.
+- **Adzuna** for job discovery.
+- **Browserbase** for managed browser sessions.
+- **Stagehand** for AI-assisted browser navigation and extraction.
+- **PostHog** for product analytics and event tracking.
+- **Zod** for validating AI-generated structured data.
 
-Create a new file named `.env` in the root of your project and add the following content:
+## Environment Variables
+
+Create a local environment file and configure the values for your own services. Do not commit secrets to the repository.
 
 ```env
-NEXT_PUBLIC_INSFORGE_URL=https://9zb7h4wq.us-east.insforge.app
+NEXT_PUBLIC_INSFORGE_URL=
 NEXT_PUBLIC_INSFORGE_ANON_KEY=
 
-NEXT_PUBLIC_POSTHOG_KEY=
-NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
+GOOGLE_GENERATIVE_AI_API_KEY=
 
-OPENAI_API_KEY=
+ADZUNA_APP_ID=
+ADZUNA_APP_KEY=
 
 BROWSERBASE_API_KEY=
 BROWSERBASE_PROJECT_ID=
 
-ADZUNA_APP_ID=
-ADZUNA_APP_KEY=
+NEXT_PUBLIC_POSTHOG_HOST=
+NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=
 ```
 
-Replace the placeholder values with your real credentials. You can get these by signing up at: [**InsForge**](https://insforge.dev/), [**Browserbase**](https://www.browserbase.com/), [**OpenAI**](https://platform.openai.com/), [**PostHog**](https://posthog.com/), [**Adzuna**](https://www.adzuna.com/)
-**Running the Project**
+## Local Development
+
+### Prerequisites
+
+- Node.js 20 or newer.
+- pnpm, npm, or the package manager specified by the repository manifest.
+- An InsForge project.
+- Adzuna credentials for job search.
+- A Google Gemini API key.
+- Browserbase credentials for company research.
+- PostHog credentials if analytics are enabled.
+
+### Install dependencies
 
 ```bash
-npm run dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to view the project.
+### Start the development server
 
-**How It Works**
+```bash
+pnpm dev
+```
 
-1. **Set up your profile** — fill in your experience, skills, target role, salary expectations, and upload a base resume PDF
-2. **Connect LinkedIn** — save a LinkedIn browser session via Browserbase so job discovery can run authenticated
-3. **Find Jobs** — the agent searches LinkedIn for roles matching your target, scores each one, and saves strong matches to your job inventory
-4. **Review matches** — browse the `/jobs` list, click into any role for the full description, match breakdown, and apply links
-5. **Tailor and apply** — generate a tailored resume for a specific role, then use the apply links directly or trigger the experimental Browserbase apply attempt
+Then open [http://localhost:3000](http://localhost:3000).
 
-**Browserbase Integration**
+### Useful checks
 
-See BROWSERBASE_REPORT.md for a detailed report on how Browserbase and Stagehand are used in this project, including the full history of the apply automation experiments and the current project state.
+```bash
+pnpm lint
+pnpm build
+```
 
-**Deploy on Vercel**
+## Product Principles
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **User-controlled applications:** JobPilot supports research and preparation; it does not submit applications without an explicit user action.
+- **Profile ownership:** AI workflows should not unexpectedly rewrite the user's canonical profile.
+- **Explainable matching:** A score should be accompanied by reasons, matched skills, and missing skills.
+- **Graceful degradation:** Missing company pages or temporary AI failures should produce useful fallbacks where possible.
+- **Server-side secrets:** API credentials and provider keys must remain on the server.
+- **Validated AI output:** Model responses should be treated as untrusted input and validated before persistence or rendering.
 
-Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Future Features
 
-## <a name="links">🔗 Assets</a>
+Potential future improvements include:
 
-Assets and snippets used in the project can be found in the **[video kit](https://jsm.dev/jobpilot-kit)**.
+- Cover letter generation for a selected job.
+- Job-specific resume tailoring with side-by-side change review.
+- Saved searches and scheduled job discovery.
+- Email or push notifications for strong matches.
+- Job status tracking such as saved, applied, interviewing, offer, and rejected.
+- Notes, reminders, and follow-up dates for each application.
+- Duplicate detection across repeated searches.
+- More job providers in addition to Adzuna.
+- Improved salary normalization and location parsing.
+- User-configurable matching preferences and scoring weights.
+- Better research freshness indicators and source confidence labels.
+- Company comparison views for shortlisted roles.
+- Accessibility and mobile experience improvements.
+- Exportable search reports and application history.
+- Optional integrations with calendars, email, and external applicant tracking systems.
+- Team or career-coach workspaces with explicit sharing permissions.
 
-<a href="https://jsm.dev/jobpilot-kit" target="_blank">
-  <img src="public/readme/readme-videokit.webp" alt="Video Kit Banner">
-</a>
+## Scope and Limitations
 
-## <a name="more">🚀 More</a>
+JobPilot currently focuses on discovery, matching, company research, resume preparation, and organization. It does not currently provide guaranteed job recommendations, scrape private accounts, bypass application protections, or submit applications automatically.
 
-**Advance your skills with our Pro Course**
+AI-generated scores and research are suggestions and may contain mistakes. Users should verify important details such as salary, location, eligibility, responsibilities, and application requirements on the original job or company website.
 
-Enjoyed creating this project? Dive deeper into our PRO courses for a richer learning adventure. They're packed with
-detailed explanations, cool features, and exercises to boost your skills. Give it a go!
+## Project Structure
 
-<a href="https://jsm.dev/jobpilot-jsm" target="_blank">
-  <img src="public/readme/readme-jsmpro.webp" alt="Project Banner">
-</a>
+```text
+src/
+├── actions/              Server actions for profile and application workflows
+├── agent/                Company research and browser-agent logic
+├── app/                  App Router pages and API routes
+├── components/           Reusable UI components
+├── lib/                  Auth, database, analytics, Adzuna, and Gemini helpers
+└── types/                Shared TypeScript types
+```
+
+## Contributing
+
+When adding a feature, keep provider credentials server-side, validate external and AI responses, scope database queries to the authenticated user, and update the relevant product documentation. Run lint and build checks before opening a pull request.
+
+## License
+
+This project is provided for development and learning purposes. Add the license that matches your intended distribution model before publishing or redistributing the code.
