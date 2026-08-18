@@ -1,5 +1,5 @@
 import { Stagehand } from "@browserbasehq/stagehand";
-import OpenAI from "openai";
+import { generateStructured } from "@/lib/gemini";
 import { z } from "zod";
 
 import { bb } from "@/lib/browserbase";
@@ -279,12 +279,12 @@ async function collectBrowserResearch(
 
   const apiKey = process.env.BROWSERBASE_API_KEY;
   const projectId = process.env.BROWSERBASE_PROJECT_ID;
-  const openaiKey = process.env.OPENAI_API_KEY;
+  const geminiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
-  if (!apiKey || !projectId || !openaiKey) {
+  if (!apiKey || !projectId || !geminiKey) {
     await log(
       logger,
-      "Browser research skipped because Browserbase or OpenAI browser credentials are not configured.",
+      "Browser research skipped because Browserbase or Gemini browser credentials are not configured.",
       "warning",
     );
     return emptyResearch;
@@ -295,7 +295,6 @@ async function collectBrowserResearch(
   try {
     const session = await bb.sessions.create({
       projectId,
-      timeout: 120,
     });
 
     stagehand = new Stagehand({
@@ -304,8 +303,8 @@ async function collectBrowserResearch(
       projectId,
       browserbaseSessionID: session.id,
       model: {
-        modelName: "openai/gpt-4o",
-        apiKey: openaiKey,
+        modelName: "google/gemini-2.5-flash",
+        apiKey: geminiKey,
       },
       disablePino: true,
     });
@@ -469,8 +468,6 @@ async function synthesizeDossier(
   profile: ResearchProfile,
   browserResearch: BrowserResearch,
 ): Promise<CompanyResearchDossier> {
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-
   const systemPrompt = `You are a sharp career strategist preparing a candidate to apply for a specific role. You are given (a) research collected from the company's own website, (b) the job posting, and (c) the candidate's profile. Produce a concise, concrete briefing that gives this specific candidate an edge for this specific role.
 
 Rules:
@@ -509,61 +506,46 @@ Experience: ${profile.years_experience ?? "Unknown"} years, level ${profile.expe
 Skills: ${profile.skills.join(", ") || "None saved"}
 Work history: ${getWorkHistory(profile.work_experience)}`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    response_format: { type: "json_object" },
-    temperature: 0.4,
-    max_tokens: 1200,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-  });
-
-  const raw = response.choices[0].message.content;
-  if (!raw) {
-    return buildFallbackDossier(job, profile);
-  }
-
   try {
-    const parsed: unknown = JSON.parse(raw);
-    const result = dossierSchema.safeParse(parsed);
+    const result = await generateStructured({
+      schema: dossierSchema,
+      system: systemPrompt,
+      prompt: userPrompt,
+      temperature: 0.4,
+      maxOutputTokens: 1200,
+    });
 
-    if (!result.success) {
-      console.error("[agent/research] dossier validation failed", result.error);
-      return buildFallbackDossier(job, profile);
-    }
 
     const fallback = buildFallbackDossier(job, profile);
 
     return {
-      companyOverview: result.data.companyOverview,
+      companyOverview: result.companyOverview,
       techStack:
-        result.data.techStack.length > 0
-          ? result.data.techStack
+        result.techStack.length > 0
+          ? result.techStack
           : fallback.techStack,
       culture:
-        result.data.culture.length > 0 ? result.data.culture : fallback.culture,
-      whyThisRole: result.data.whyThisRole,
+        result.culture.length > 0 ? result.culture : fallback.culture,
+      whyThisRole: result.whyThisRole,
       yourEdge:
-        result.data.yourEdge.length > 0
-          ? result.data.yourEdge
+        result.yourEdge.length > 0
+          ? result.yourEdge
           : fallback.yourEdge,
       gapsToAddress:
-        result.data.gapsToAddress.length > 0
-          ? result.data.gapsToAddress
+        result.gapsToAddress.length > 0
+          ? result.gapsToAddress
           : fallback.gapsToAddress,
       smartQuestions:
-        result.data.smartQuestions.length > 0
-          ? result.data.smartQuestions
+        result.smartQuestions.length > 0
+          ? result.smartQuestions
           : fallback.smartQuestions,
       interviewPrep:
-        result.data.interviewPrep.length > 0
-          ? result.data.interviewPrep
+        result.interviewPrep.length > 0
+          ? result.interviewPrep
           : fallback.interviewPrep,
       sources:
-        result.data.sources.length > 0
-          ? result.data.sources
+        result.sources.length > 0
+          ? result.sources
           : browserResearch.sources,
     };
   } catch (error) {
@@ -578,10 +560,10 @@ export async function researchCompany({
   log: logger,
 }: ResearchInput): Promise<ResearchResult> {
   try {
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
       return {
         success: false,
-        error: "OpenAI is not configured for company research.",
+        error: "Gemini is not configured for company research.",
       };
     }
 

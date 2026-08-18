@@ -1,14 +1,29 @@
 import React from "react";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import OpenAI from "openai";
+import { z } from "zod";
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 
 import { getCurrentUser } from "@/lib/auth";
+import { generateStructured } from "@/lib/gemini";
 import { createInsforgeServer } from "@/lib/insforge-server";
 import { trackPostHogEvent } from "@/lib/posthog-server";
 import type { Profile } from "@/types";
 import { ResumePDF, type GeneratedContent } from "./ResumePDF";
+
+const generatedContentSchema = z.object({
+  summary: z.string().min(1),
+  work_experience: z.array(
+    z.object({
+      company: z.string(),
+      title: z.string(),
+      start_date: z.string(),
+      end_date: z.string().nullable(),
+      is_current: z.boolean(),
+      bullets: z.array(z.string()).min(1),
+    }),
+  ),
+});
 
 function createResumeDocument(
   profile: Profile,
@@ -46,9 +61,6 @@ export async function POST(_req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Generate polished resume content with GPT-4o
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-
     const profileContext = JSON.stringify({
       full_name: profile.full_name,
       current_title: profile.current_title,
@@ -61,58 +73,14 @@ export async function POST(_req: NextRequest): Promise<NextResponse> {
       job_titles_seeking: profile.job_titles_seeking,
     });
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      response_format: { type: "json_object" },
+    const generated = (await generateStructured({
+      schema: generatedContentSchema,
+      system:
+        "You are a professional resume writer. Produce a 2-3 sentence professional summary and rewrite each work experience entry into 3-5 concise, achievement-focused bullets beginning with strong action verbs.",
+      prompt: `Generate polished resume content for this candidate. Preserve the company, title, dates, and current status from the source profile.\n\nCandidate profile:\n${profileContext}`,
       temperature: 0.7,
-      max_tokens: 1000,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a professional resume writer. Given a candidate's profile data, produce a 2-3 sentence professional summary paragraph and rewrite each work experience entry's responsibilities as 3-5 concise, achievement-focused bullet points starting with strong action verbs. Return only valid JSON.",
-        },
-        {
-          role: "user",
-          content: `Generate polished resume content for this candidate and return JSON matching this exact shape:
-{
-  "summary": "string — 2-3 sentence professional summary",
-  "work_experience": [
-    {
-      "company": "string",
-      "title": "string",
-      "start_date": "string",
-      "end_date": "string | null",
-      "is_current": false,
-      "bullets": ["string", "string", "string"]
-    }
-  ]
-}
-
-Candidate profile:
-${profileContext}`,
-        },
-      ],
-    });
-
-    const raw = response.choices[0].message.content;
-    if (!raw) {
-      return NextResponse.json(
-        { success: false, error: "AI returned an empty response" },
-        { status: 500 },
-      );
-    }
-
-    let generated: GeneratedContent;
-    try {
-      generated = JSON.parse(raw) as GeneratedContent;
-    } catch {
-      console.error("[api/resume/generate] JSON parse failed", raw);
-      return NextResponse.json(
-        { success: false, error: "Failed to parse AI response" },
-        { status: 500 },
-      );
-    }
+      maxOutputTokens: 1000,
+    })) as GeneratedContent;
 
     // Render PDF buffer server-side
     const buffer = await renderToBuffer(createResumeDocument(profile, generated));

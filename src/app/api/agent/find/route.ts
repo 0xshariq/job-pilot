@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import { z } from "zod";
+
+import { generateStructured } from "@/lib/gemini";
 
 import { getCurrentUser } from "@/lib/auth";
 import { createInsforgeServer } from "@/lib/insforge-server";
@@ -29,19 +31,26 @@ type ProfileScoreContext = {
   job_titles_seeking: string[] | null;
 };
 
+const scoreSchema = z.object({
+  results: z.array(
+    z.object({
+      jobId: z.string(),
+      matchScore: z.number().min(0).max(100),
+      matchReason: z.string().min(1),
+      matchedSkills: z.array(z.string()).default([]),
+      missingSkills: z.array(z.string()).default([]),
+    }),
+  ),
+});
+
 async function scoreJobsBatch(
   jobs: AdzunaJob[],
   profile: ProfileScoreContext,
 ): Promise<ScoredResult[]> {
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-
   const jobList = jobs
     .map(
       (j, i) =>
-        `Job ${i + 1} (id: "${j.id}"):
-Title: ${j.title}
-Company: ${j.company.display_name}
-Description: ${j.description}`,
+        `Job ${i + 1} (id: "${j.id}"):\nTitle: ${j.title}\nCompany: ${j.company.display_name}\nDescription: ${j.description}`,
     )
     .join("\n\n");
 
@@ -52,70 +61,30 @@ Description: ${j.description}`,
     desired_roles: profile.job_titles_seeking,
   });
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    response_format: { type: "json_object" },
-    temperature: 0.3,
-    max_tokens: 1200,
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are a job matching assistant. Score each job against the candidate profile and return only valid JSON.",
-      },
-      {
-        role: "user",
-        content: `Score each of the following ${jobs.length} jobs against this candidate profile and return JSON with this exact shape:
-{
-  "results": [
-    {
-      "jobId": "string — the id field from the job",
-      "matchScore": number (0-100),
-      "matchReason": "string — one concise paragraph explaining the match",
-      "matchedSkills": ["string"],
-      "missingSkills": ["string"]
-    }
-  ]
-}
-
-Candidate profile:
-${profileContext}
-
-Jobs to score:
-${jobList}`,
-      },
-    ],
-  });
-
-  const raw = response.choices[0].message.content;
-  if (!raw) {
-    return jobs.map((j) => ({
-      jobId: j.id,
-      matchScore: 0,
-      matchReason: "Score unavailable",
-      matchedSkills: [],
-      missingSkills: [],
-    }));
-  }
-
   try {
-    const parsed = JSON.parse(raw) as { results?: ScoredResult[] };
-    return jobs.map((job, i) => {
-      const scored =
-        parsed.results?.find((r) => r.jobId === job.id) ??
-        parsed.results?.[i];
-      return (
-        scored ?? {
-          jobId: job.id,
-          matchScore: 0,
-          matchReason: "Score unavailable",
-          matchedSkills: [],
-          missingSkills: [],
-        }
-      );
+    const parsed = await generateStructured({
+      schema: scoreSchema,
+      system:
+        "You are a job matching assistant. Score each job against the candidate profile. Keep explanations concise and return one result per job.",
+      prompt: `Score each of the following ${jobs.length} jobs against this candidate profile.\n\nCandidate profile:\n${profileContext}\n\nJobs to score:\n${jobList}`,
+      temperature: 0.3,
+      maxOutputTokens: 1200,
     });
-  } catch {
-    console.error("[api/agent/find] scoreJobsBatch JSON parse failed");
+
+    return jobs.map((job, i) => {
+      const scored = parsed.results.find((r) => r.jobId === job.id) ?? parsed.results[i];
+      return scored
+        ? { ...scored, matchScore: Math.round(Math.max(0, Math.min(100, scored.matchScore))) }
+        : {
+            jobId: job.id,
+            matchScore: 0,
+            matchReason: "Score unavailable",
+            matchedSkills: [],
+            missingSkills: [],
+          };
+    });
+  } catch (error) {
+    console.error("[api/agent/find] scoreJobsBatch", error);
     return jobs.map((j) => ({
       jobId: j.id,
       matchScore: 0,
