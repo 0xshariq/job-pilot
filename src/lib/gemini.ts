@@ -12,6 +12,8 @@ export async function generateStructured<TSchema extends z.ZodType>(input: {
   prompt: string;
   temperature?: number;
   maxOutputTokens?: number;
+  abortSignal?: AbortSignal;
+  maxRetries?: number;
 }): Promise<z.infer<TSchema>> {
   if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     throw new Error("Gemini is not configured.");
@@ -24,6 +26,13 @@ export async function generateStructured<TSchema extends z.ZodType>(input: {
     prompt: input.prompt,
     temperature: input.temperature ?? 0.3,
     maxOutputTokens: input.maxOutputTokens ?? 1200,
+    abortSignal: input.abortSignal,
+    maxRetries: input.maxRetries ?? 2,
+    providerOptions: {
+      google: {
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    },
   });
 
   return object as z.infer<TSchema>;

@@ -543,10 +543,7 @@ Work history: ${getWorkHistory(profile.work_experience)}`;
         result.interviewPrep.length > 0
           ? result.interviewPrep
           : fallback.interviewPrep,
-      sources:
-        result.sources.length > 0
-          ? result.sources
-          : browserResearch.sources,
+      sources: browserResearch.sources,
     };
   } catch (error) {
     console.error("[agent/research] dossier JSON parse failed", error);

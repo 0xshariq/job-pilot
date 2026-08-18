@@ -36,7 +36,7 @@ function createResumeDocument(
   ) as unknown as React.ReactElement<DocumentProps>;
 }
 
-export async function POST(_req: NextRequest): Promise<NextResponse> {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const user = await getCurrentUser();
     if (!user) {
@@ -73,14 +73,28 @@ export async function POST(_req: NextRequest): Promise<NextResponse> {
       job_titles_seeking: profile.job_titles_seeking,
     });
 
-    const generated = (await generateStructured({
-      schema: generatedContentSchema,
-      system:
-        "You are a professional resume writer. Produce a 2-3 sentence professional summary and rewrite each work experience entry into 3-5 concise, achievement-focused bullets beginning with strong action verbs.",
-      prompt: `Generate polished resume content for this candidate. Preserve the company, title, dates, and current status from the source profile.\n\nCandidate profile:\n${profileContext}`,
-      temperature: 0.7,
-      maxOutputTokens: 1000,
-    })) as GeneratedContent;
+    let generated: GeneratedContent;
+    try {
+      generated = await generateStructured({
+        schema: generatedContentSchema,
+        system:
+          "You are a professional resume writer. Produce a 2-3 sentence professional summary and rewrite each work experience entry into 3-5 concise, achievement-focused bullets beginning with strong action verbs.",
+        prompt: `Generate polished resume content for this candidate. Preserve the company, title, dates, and current status from the source profile.\n\nCandidate profile:\n${profileContext}`,
+        temperature: 0.7,
+        maxOutputTokens: 1000,
+        abortSignal: req.signal,
+        maxRetries: 2,
+      });
+    } catch (error) {
+      console.error("[api/resume/generate] structured generation", error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Resume content generation failed. Please try again.",
+        },
+        { status: 502 },
+      );
+    }
 
     // Render PDF buffer server-side
     const buffer = await renderToBuffer(createResumeDocument(profile, generated));

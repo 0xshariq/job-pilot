@@ -35,7 +35,7 @@ const scoreSchema = z.object({
   results: z.array(
     z.object({
       jobId: z.string(),
-      matchScore: z.number().min(0).max(100),
+      matchScore: z.number(),
       matchReason: z.string().min(1),
       matchedSkills: z.array(z.string()).default([]),
       missingSkills: z.array(z.string()).default([]),
@@ -72,9 +72,12 @@ async function scoreJobsBatch(
     });
 
     return jobs.map((job, i) => {
-      const scored = parsed.results.find((r) => r.jobId === job.id) ?? parsed.results[i];
+      const positionalFallback =
+        parsed.results.length === jobs.length ? parsed.results[i] : undefined;
+      const scored =
+        parsed.results.find((r) => r.jobId === job.id) ?? positionalFallback;
       return scored
-        ? { ...scored, matchScore: Math.round(Math.max(0, Math.min(100, scored.matchScore))) }
+        ? { ...scored, jobId: job.id, matchScore: Math.round(Math.max(0, Math.min(100, scored.matchScore))) }
         : {
             jobId: job.id,
             matchScore: 0,

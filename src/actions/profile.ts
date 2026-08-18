@@ -215,7 +215,15 @@ export type ExtractedProfile = {
   phone: string | null;
   location: string | null;
   current_title: string | null;
-  experience_level: string | null;
+  experience_level:
+    | "Junior"
+    | "Mid-Level"
+    | "Senior"
+    | "Lead"
+    | "Manager"
+    | "Director"
+    | "Executive"
+    | null;
   years_experience: number | null;
   skills: string[];
   industries: string[];
@@ -226,12 +234,22 @@ export type ExtractedProfile = {
   portfolio_url: string | null;
 };
 
-const extractedProfileSchema = z.object({
+const experienceLevelSchema = z.enum([
+  "Junior",
+  "Mid-Level",
+  "Senior",
+  "Lead",
+  "Manager",
+  "Director",
+  "Executive",
+]);
+
+const extractedProfileSchema: z.ZodType<ExtractedProfile> = z.object({
   full_name: z.string().nullable(),
   phone: z.string().nullable(),
   location: z.string().nullable(),
   current_title: z.string().nullable(),
-  experience_level: z.string().nullable(),
+  experience_level: experienceLevelSchema.nullable(),
   years_experience: z.number().nullable(),
   skills: z.array(z.string()).default([]),
   industries: z.array(z.string()).default([]),
@@ -299,7 +317,7 @@ export async function extractProfile(): Promise<{
       maxOutputTokens: 800,
     });
 
-    return { success: true, data: extracted as ExtractedProfile };
+    return { success: true, data: extracted };
   } catch (error) {
     console.error("[actions/profile] extractProfile", error);
     return { success: false, error: "Failed to extract profile from resume." };
