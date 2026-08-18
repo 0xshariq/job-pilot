@@ -9,7 +9,7 @@
 | Cloud browser                  | Browserbase              | Company research — browsing company public pages |
 | AI browser control             | Stagehand                | Company page interaction and content extraction  |
 | Job Discovery                  | Adzuna API               | Job search and discovery                         |
-| AI model                       | OpenAI GPT-4o            | Matching, research synthesis, extraction         |
+| AI model                       | Google Gemini            | Matching, research synthesis, extraction         |
 | Analytics                      | PostHog                  | Event tracking and dashboard charts              |
 | PDF generation                 | @react-pdf/renderer      | Resume PDF rendering                             |
 | Styling                        | Tailwind CSS + shadcn/ui | UI components and styling                        |
